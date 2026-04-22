@@ -3,7 +3,6 @@ package dev.scx.data.sql.test;
 import dev.scx.data.LockMode;
 import dev.scx.data.sql.SQLRepository;
 import dev.scx.sql.SQL;
-import dev.scx.sql.support.TableSupport;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
@@ -13,7 +12,8 @@ import java.util.List;
 
 import static dev.scx.data.field_policy.FieldPolicyBuilder.include;
 import static dev.scx.data.query.QueryBuilder.eq;
-import static dev.scx.data.sql.test.DataSQLTest.sqlContext;
+import static dev.scx.data.sql.test.DataSQLTest.dialect;
+import static dev.scx.data.sql.test.DataSQLTest.sqlClient;
 
 /// 转账测试
 public class TransferTest {
@@ -27,15 +27,18 @@ public class TransferTest {
 
     @BeforeTest
     public static void beforeTest() throws SQLException {
-        sqlContext.sqlClient().execute(SQL.sql("drop table if exists user"));
-        userRepository = new SQLRepository<>(User.class, sqlContext);
-        TableSupport.fixTable(userRepository.table(), sqlContext);
+        sqlClient.execute(SQL.sql("drop table if exists user"));
+        userRepository = new SQLRepository<>(User.class, sqlClient,dialect);
+        var createTableDDLs = dialect.getCreateTableDDLs(userRepository.table());
+        for (var createTableDDL : createTableDDLs) {
+            sqlClient.execute(SQL.sql(createTableDDL));
+        }
         //清空
         userRepository.clear();
     }
 
     public static void transfer(Long fromUserId, Long toUserId, Long amount) throws SQLException {
-        sqlContext.sqlClient().autoTransaction(() -> {
+        sqlClient.autoTransaction(() -> {
             var fromUser = userRepository.findFirst(eq("id", fromUserId), LockMode.EXCLUSIVE);
             var toUser = userRepository.findFirst(eq("id", toUserId), LockMode.EXCLUSIVE);
 

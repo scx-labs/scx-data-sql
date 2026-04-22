@@ -136,11 +136,11 @@
 
         <!-- *********************** 以下为依赖包版本 *********************** -->
         <scx-data.version>0.2.0</scx-data.version>
-        <scx-sql.version>0.0.3</scx-sql.version>
+        <scx-sql.version>0.1.0</scx-sql.version>
         <scx-array.version>0.0.1</scx-array.version>
         <scx-random.version>0.0.1</scx-random.version>
         <scx-collection.version>0.1.0</scx-collection.version>
-        <scx-sql-mysql.version>0.0.1</scx-sql-mysql.version>
+        <scx-sql-mysql.version>0.0.2</scx-sql-mysql.version>
         <scx-jdbc-spy.version>0.3.0</scx-jdbc-spy.version>
         <scx-logging.version>0.0.1</scx-logging.version>
         <testng.version>7.11.0</testng.version>

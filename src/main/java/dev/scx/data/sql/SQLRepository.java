@@ -17,7 +17,7 @@ import dev.scx.data.sql.sql_builder.*;
 import dev.scx.sql.BatchSQL;
 import dev.scx.sql.SQL;
 import dev.scx.sql.SQLClient;
-import dev.scx.sql.SQLContext;
+import dev.scx.sql.dialect.Dialect;
 import dev.scx.sql.extractor.ResultSetExtractor;
 import dev.scx.sql.extractor.bean.BeanBuilder;
 import dev.scx.sql.extractor.map.MapBuilder;
@@ -37,9 +37,9 @@ public class SQLRepository<Entity> implements AggregatableRepository<Entity, Lon
 
     // *********** 基本字段 ***************
     final Class<Entity> entityClass;
-    final SQLContext sqlContext;
     final EntityTable<Entity> table;
     final SQLClient sqlClient;
+    final Dialect dialect;
 
     // *********** 结果解析器 ***************
     final FieldColumnLabelMapping fieldColumnLabelMapping;
@@ -58,16 +58,16 @@ public class SQLRepository<Entity> implements AggregatableRepository<Entity, Lon
     final CountSQLBuilder countSQLBuilder;
     final AggregateSQLBuilder aggregateSQLBuilder;
 
-    public SQLRepository(Class<Entity> entityClass, SQLContext sqlContext) {
-        this(new AnnotationConfigTable<>(entityClass), sqlContext);
+    public SQLRepository(Class<Entity> entityClass, SQLClient sqlClient,Dialect dialect) {
+        this(new AnnotationConfigTable<>(entityClass), sqlClient,dialect);
     }
 
-    public SQLRepository(EntityTable<Entity> table, SQLContext sqlContext) {
+    public SQLRepository(EntityTable<Entity> table, SQLClient sqlClient,Dialect dialect) {
         // 1, 初始化基本字段
         this.entityClass = table.entityClass();
-        this.sqlContext = sqlContext;
         this.table = table;
-        this.sqlClient = sqlContext.sqlClient();
+        this.sqlClient = sqlClient;
+        this.dialect = dialect;
 
         // 2, 创建返回值解析器
         this.fieldColumnLabelMapping = new FieldColumnLabelMapping(table);
@@ -79,17 +79,16 @@ public class SQLRepository<Entity> implements AggregatableRepository<Entity, Lon
         this.countResultExtractor = ofSingleValue("count", Long.class);
 
         // 3, 创建 SQL 语句构造器
-        var dialect = sqlContext.dialect();
-        var columnNameParser = new SQLColumnNameParser(table, dialect);
-        var whereParser = new SQLWhereParser(columnNameParser, dialect);
+        var columnNameParser = new SQLColumnNameParser(table, this.dialect);
+        var whereParser = new SQLWhereParser(columnNameParser, this.dialect);
         var groupByParser = new SQLGroupByParser(columnNameParser);
         var orderByParser = new SQLOrderByParser(columnNameParser);
-        this.insertSQLBuilder = new InsertSQLBuilder(table, dialect, columnNameParser);
-        this.selectSQLBuilder = new SelectSQLBuilder(table, dialect, whereParser, orderByParser);
-        this.updateSQLBuilder = new UpdateSQLBuilder(table, dialect, columnNameParser, whereParser, orderByParser);
-        this.deleteSQLBuilder = new DeleteSQLBuilder(table, dialect, whereParser, orderByParser);
-        this.countSQLBuilder = new CountSQLBuilder(table, dialect, whereParser);
-        this.aggregateSQLBuilder = new AggregateSQLBuilder(table, dialect, whereParser, groupByParser, orderByParser);
+        this.insertSQLBuilder = new InsertSQLBuilder(table, this.dialect, columnNameParser);
+        this.selectSQLBuilder = new SelectSQLBuilder(table, this.dialect, whereParser, orderByParser);
+        this.updateSQLBuilder = new UpdateSQLBuilder(table, this.dialect, columnNameParser, whereParser, orderByParser);
+        this.deleteSQLBuilder = new DeleteSQLBuilder(table, this.dialect, whereParser, orderByParser);
+        this.countSQLBuilder = new CountSQLBuilder(table, this.dialect, whereParser);
+        this.aggregateSQLBuilder = new AggregateSQLBuilder(table, this.dialect, whereParser, groupByParser, orderByParser);
     }
 
     @Override
@@ -160,8 +159,12 @@ public class SQLRepository<Entity> implements AggregatableRepository<Entity, Lon
         return table;
     }
 
-    public final SQLClient sqlClient() {
+    public SQLClient sqlClient() {
         return sqlClient;
+    }
+
+    public Dialect dialect() {
+        return dialect;
     }
 
     public BeanBuilder<Entity> beanBuilder() {
@@ -174,10 +177,6 @@ public class SQLRepository<Entity> implements AggregatableRepository<Entity, Lon
 
     public ResultSetExtractor<Entity, RuntimeException> entityBeanExtractor() {
         return entityBeanExtractor;
-    }
-
-    public SQLContext sqlContext() {
-        return sqlContext;
     }
 
     public SQL buildInsertSQL(Entity entity, FieldPolicy fieldPolicy) {
