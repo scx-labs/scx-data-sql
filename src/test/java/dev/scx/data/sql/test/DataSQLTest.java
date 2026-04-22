@@ -8,8 +8,9 @@ import dev.scx.jdbc.spy.listener.logging.LoggingDataSourceListener;
 import dev.scx.jdbc.spy.listener.logging.PreparedStatementLogStyle;
 import dev.scx.logging.ScxLogging;
 import dev.scx.sql.SQL;
-import dev.scx.sql.SQLContext;
-import dev.scx.sql.support.TableSupport;
+import dev.scx.sql.SQLClient;
+import dev.scx.sql.dialect.Dialect;
+import dev.scx.sql.dialect.DialectSelector;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -30,7 +31,8 @@ import static dev.scx.data.query.QueryBuilder.lt;
 public class DataSQLTest {
 
     public static final DataSource dataSource = getMySQLDataSource();
-    public static final SQLContext sqlContext = SQLContext.of(dataSource);
+    public static final SQLClient sqlClient = SQLClient.of(dataSource);
+    public static final Dialect dialect = DialectSelector.findDialect(dataSource);
     public static SQLRepository<Car> carRepository;
 
     static {
@@ -58,9 +60,12 @@ public class DataSQLTest {
 
     @BeforeTest
     public static void beforeTest() throws SQLException {
-        sqlContext.sqlClient().execute(SQL.sql("drop table if exists car"));
-        carRepository = new SQLRepository<>(Car.class, sqlContext);
-        TableSupport.fixTable(carRepository.table(), sqlContext);
+        sqlClient.execute(SQL.sql("drop table if exists car"));
+        carRepository = new SQLRepository<>(Car.class, sqlClient,dialect);
+        var createTableDDLs = dialect.getCreateTableDDLs(carRepository.table());
+        for (var createTableDDL : createTableDDLs) {
+            sqlClient.execute(SQL.sql(createTableDDL));
+        }
         //清空
         carRepository.clear();
     }

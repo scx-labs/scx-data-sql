@@ -3,7 +3,7 @@ package dev.scx.data.sql.test;
 import dev.scx.data.sql.annotation.Column;
 import dev.scx.data.sql.annotation.Table;
 
-@Table("scx_user")
+@Table("user")
 public class User {
 
     @Column(primary = true, autoIncrement = true)
